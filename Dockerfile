@@ -1,22 +1,19 @@
-# https://hub.docker.com/_/microsoft-dotnet-core
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build
-WORKDIR /source
 
-# copy csproj and restore as distinct layers
-COPY *.sln .
-COPY Albert_Docker/*.csproj ./Albert_Docker/
-RUN dotnet restore -r linux-musl-x64
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build-env
+WORKDIR /app
 
-# copy everything else and build app
-COPY Albert_Docker/. ./Albert_Docker/
-WORKDIR /source/Albert_Docker
-RUN dotnet publish -c release -o /app -r linux-musl-x64 --self-contained false --no-restore
 
-# final stage/image
+COPY Albert_Docker/*.csproj ./
+RUN dotnet restore 
+
+COPY . ./
+RUN dotnet publish -c Release -o out
+
+
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-alpine
 WORKDIR /app
-COPY --from=build /app ./
+COPY --from=build-env /app/out .
 
 
 
-ENTRYPOINT ["./Albert_Docker"]
+ENTRYPOINT ["dotnet","Albert_Docker.dll"]
